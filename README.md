@@ -2,7 +2,6 @@
 
 * [VERSION 0.0.200112](https://github.com/carlosjhr64/martelo/releases)
 * [github](https://www.github.com/carlosjhr64/martelo)
-* [rubygems](https://rubygems.org/gems/martelo)
 
 ## DESCRIPTION:
 
