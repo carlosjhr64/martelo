@@ -1,6 +1,5 @@
 #! ruby
 require 'test/unit'
-require 'martelo'
 
 class TestMartelo < Test::Unit::TestCase
   def test_martelo

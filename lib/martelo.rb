@@ -7,7 +7,7 @@ require 'singleton'
 require 'date'
 
 module Config
-  VERSION = '0.0.200112'
+  VERSION = '0.0.200126'
   BACKUP  = File.expand_path '~/Dropbox/tasks.thor'
   EDITOR  = 'vim'
   HISTORY = 'History.txt'
@@ -238,7 +238,7 @@ class Write < Magni
   def self.help(io=STDOUT)
     `ruby -I ./lib ./bin/#{Project.instance.name} -h`.split(/\n/).each do |line|
       if line.length > 0
-        io.print '    '
+        io.print '    $ '
         io.puts line
       end
     end
@@ -255,7 +255,7 @@ class Write < Magni
     wrote = skip = false
     File.open(Config::README, 'w') do |io|
       while line = lines.shift
-        skip = false if line=~/^==/
+        skip = false if line=~/^##/
         next if skip
         io.puts line
         if line=~/^[=#][=#]\s*HELP:?\s*$/
@@ -267,7 +267,7 @@ class Write < Magni
         end
       end
       unless wrote
-        io.puts "== HELP:"
+        io.puts "## HELP:"
         io.puts
         Write.help(io)
         io.puts
