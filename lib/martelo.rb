@@ -32,7 +32,7 @@ class Magni < Thor
     unless @warned
       @warned = true
       goto_git
-      puts `git status --porcelain`.color :red
+      puts `git status --porcelain`.color :orange
       goto_wd
     end
   end
@@ -56,7 +56,7 @@ class Tasks < Magni
   desc 'commit', "commits tasks.thor's edits"
   def commit
     goto_git
-    system 'git commit -a'
+    system('git commit -a') and system('git push')
     goto_wd
   end
 
@@ -67,7 +67,6 @@ class Tasks < Magni
     Use tasks:diff to diff the git.
   LONGDESC
   def diff
-    @warned = true
     goto_git
     system 'git diff'
   end
