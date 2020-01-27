@@ -731,49 +731,82 @@ class General < Magni
   end
 
   desc 'template', 'compares current workspace to template'
-  def template(fix=nil)
-    checkmark = "\u2713"
-    cross = "\u2715"
-    template = File.join(__dir__,'template')
-    ['.ruby-version', '.config.fish', '.gitignore', '.gemignore', '.irbrc', 'test/tc_version','test/tc_readme_rocket_check'].each do |f|
-      if fix
-        if File.basename(f)==fix
+  long_desc <<-LONG_DESC
+    Compares current workspace to template
+  LONG_DESC
+  option :'cp', default: nil
+  option :'force', default: false, type: :boolean
+  def template
+    cp, force  =  options[:cp], options[:force]
+    checkmark, cross  =  "\u2713", "\u2715"
+    template  =  File.join(__dir__,'template')
+    ok = true
+    ####
+    ['.ruby-version', '.config.fish', '.gitignore', '.gemignore',
+     '.irbrc', 'test/tc_version', 'test/tc_readme_rocket_check'
+    ].each do |f|
+      case cp
+      when nil
+        print "#{File.basename(f)}: "
+        if File.exist?(f)
+          if ['.irbrc'].include? f
+            puts checkmark.encode('utf-8').green
+          else
+            if system "colordiff --ignore-matching-lines='version =' #{template}/#{f} #{f}"
+              puts checkmark.encode('utf-8').green
+            else
+              ok &&= false
+            end
+          end
+        else
+          puts cross.encode.red
+        end
+      when 'cp'
+        unless File.exist? f
           puts "cp #{template}/#{f} #{f}"
           system "cp #{template}/#{f} #{f}"
-          return
+          ok &&= false
         end
-        next
-      end
-      print "#{File.basename(f)}: "
-      if File.exist?(f)
-        if ['.irbrc'].include? f
-          puts checkmark.encode('utf-8').green
+      when File.basename(f)
+        if force or not File.exist? f
+          puts "cp #{template}/#{f} #{f}"
+          system "cp #{template}/#{f} #{f}"
         else
-          if system "colordiff --ignore-matching-lines='version =' #{template}/#{f} #{f}"
-            puts checkmark.encode('utf-8').green
-          end
+          puts "File exist!".red
+        end
+        return
+      end
+    end
+    ####
+    f = '.git/hooks/pre-commit'
+    case cp
+    when nil
+      print "pre-commit: "
+      if File.exist?(f)
+        if system "colordiff #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
+          puts checkmark.encode('utf-8').green
         end
       else
         puts cross.encode.red
       end
-    end
-    f = '.git/hooks/pre-commit'
-    if fix
-      if fix=='pre-commit'
+    when 'cp'
+      unless File.exist? f
         puts "cp #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
         system "cp #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
-        return
+        ok &&= false
       end
-      puts "#{fix} did not match anything."
+    when 'pre-commit'
+      if force or not File.exist? f
+        puts "cp #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
+        system "cp #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
+      else
+        puts "File exist!".red
+      end
+      return
+    else
+      puts "#{cp} did not match anything.".red
       return
     end
-    print "pre-commit: "
-    if File.exist?(f)
-      if system "colordiff #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
-        puts checkmark.encode('utf-8').green
-      end
-    else
-      puts cross.encode.red
-    end
+    puts 'OK'.green  if ok
   end
 end
