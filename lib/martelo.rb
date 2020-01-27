@@ -22,7 +22,7 @@ TODO    = 'TODO.txt'
 README  = 'README.md'
 HISTORY = 'History.txt'
 
-### Helper modules ###
+### Helpers ###
 
 # Exit messages
 module Exit
