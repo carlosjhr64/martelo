@@ -61,12 +61,16 @@ module EXIT
 end
 
 module GIT
+  def GIT.diff
+    system 'git diff --minimal --ignore-space-change'
+  end
+
   def GIT.commit_all
-    system('git commit -a')
+    system 'git commit -a'
   end
 
   def GIT.push
-    system('git push')
+    system 'git push'
   end
 
   def GIT.tag_list
@@ -219,7 +223,7 @@ class Tasks < Magni
   LONGDESC
   def diff
     goto_martelo
-    system 'git diff'
+    GIT.diff
     goto_wd
   end
 
@@ -277,7 +281,7 @@ class Gem < Magni
     EXIT.software "#{version} did not match gem file" unless gem.include?(version)
     pkgem = File.join('pkg', gem)
     EXIT.protocol "#{pkgem} exists!?" if File.exist?(pkgem)
-    if system("gem push #{gem}")
+    if system "gem push #{gem}"
       File.rename gem, pkgem
       Write.add_history(pkgem)
     else
@@ -536,7 +540,7 @@ class Ruby < Magni
     pass = true
     Ruby.tests(pattern) do |fn|
       verbose = (fn=~/\.rb$/)? ' --verbose=progress' : ''
-      unless system("ruby -I ./lib #{fn} #{verbose}")
+      unless system "ruby -I ./lib #{fn} #{verbose}"
         pass = false
         system("ruby -I ./lib #{fn}") unless fn=~/manually.rb$/
       end
@@ -581,7 +585,7 @@ class Ruby < Magni
           cmd = $7
           k = ".#{cmd}"
           unless versions.has_key?(k)
-            if system("which '#{cmd}' > /dev/null 2>&1")
+            if system "which '#{cmd}' > /dev/null 2>&1"
               v = `#{cmd} --version 2> /dev/null`.strip.split(/\n/).first
               v = `#{cmd} -v 2> /dev/null`.strip.split.last unless v
               v = `#{cmd} -v 2>&1`.strip.split.last unless v
@@ -685,7 +689,7 @@ class General < Magni
   def sow(gemname)
     EXIT.usage "Expected a proper gem name(=~/^[a-z]+$/)" unless //.match?(gemname)
     EXIT.couldnt "#{gemname} exists." if File.exist?(gemname)
-    EXIT.couldnt "git init has problems?" unless system("git init #{gemname}")
+    EXIT.couldnt "git init has problems?" unless system "git init #{gemname}"
     template = File.join(__dir__,'template')
     if File.directory?(template)
       packing_list = File.join(template, 'packing-list')
