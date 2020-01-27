@@ -18,31 +18,56 @@ module Config
 end
 
 class Magni < Thor
-  @@warned = false
   def initialize(*params)
     super
-    #warnings = proc {STDERR.puts "Warning: tasks not backed up".color(:red) unless system("diff -q #{__FILE__} #{BACKUP} > /dev/null 2>&1")}
+    @wd = Dir.getwd
+    @warned = false
     warnings = proc {
-      unless @@warned or system("diff -q #{__FILE__} #{Config::BACKUP} > /dev/null 2>&1")
-        @@warned = true
-        STDERR.puts "Warning: tasks not backed up".color(:red)
+      unless @warned
+        @warned = true
+        goto_git
+        system 'git status --porcelain'
+        goto_wd
       end
     }
     ObjectSpace.define_finalizer(self, warnings)
+  end
+
+  private
+
+  def goto_git
+    # This file, lib/martelo.rb, is expected to be symlinked by tasks.thor.
+    # Thor will see __FILE__ as tasks.thor, so goto tasks.thor's directory.
+    Dir.chdir File.dirname __FILE__
+    # Now read the symlink to get martelo's git directory and goto it.
+    Dir.chdir File.dirname File.dirname File.expand_path File.readlink __FILE__
+  end
+
+  def goto_wd
+    Dir.chdir @wd
   end
 end
 
 class Tasks < Magni
   include FileUtils::Verbose
 
-  desc 'backup', 'Copies tasks into backup'
-  def backup
-    cp __FILE__, Config::BACKUP
+  desc 'commit', "commits tasks.thor's edits"
+  def commit
+    goto_git
+    system 'git commit -a'
+    goto_wd
   end
 
-  desc 'diff', 'Diff of tasks and backp'
+  desc 'diff', "tasks.thor's `git diff`"
+  long_desc <<-LONGDESC
+    tasks.thor's file links to lib/martelo.rb's git.
+    Edits to tasks.thor are done in this git.
+    Use tasks:diff to diff the git.
+  LONGDESC
   def diff
-    system "colordiff #{Config::BACKUP} #{__FILE__}"
+    @warned = true
+    goto_git
+    system 'git diff'
   end
 
   desc 'edit', 'Edit the task'
