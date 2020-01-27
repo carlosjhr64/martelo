@@ -36,7 +36,7 @@ module Exit
   }
   def self.message(msg, errno, file, line, method)
     who = "#{File.basename(file)}, ##{line}, #{method}"
-    STDERR.puts "#{ERRMSG[errno]}: #{who.red}: #{msg.bright}"
+    STDERR.puts "#{ERRMSG[errno]}: #{who.red}: #{msg}"
     exit errno # Usage Error
   end
   def self.usage(msg)
@@ -599,11 +599,11 @@ class Ruby < Magni
     ].each do |libs, desc, system, join|
       puts desc.blue
       if join
-        puts libs.map{|l| l.bright}.join(', ')
+        puts libs.map{|l| l}.join(', ')
       else
         libs.each do |lib|
           key = (system)? ".#{lib}" : lib
-          puts "#{lib.bright}: #{versions[key]}"
+          puts "#{lib}: #{versions[key]}"
         end
       end
     end
