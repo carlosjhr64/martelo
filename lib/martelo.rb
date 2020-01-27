@@ -35,7 +35,7 @@ class Magni < Thor
     unless Magni.warned
       Magni.warned = true
       goto_git
-      puts `git status --porcelain`.colorize(:yellow)
+      puts `git status --porcelain`.yellow
       goto_wd
     end
   end
@@ -100,7 +100,7 @@ module Exit
   }
   def self.message(msg, errno, file, line, method)
     who = "#{File.basename(file)}, ##{line}, #{method}"
-    STDERR.puts "#{ERRMSG[errno]}: #{who.colorize(:red)}: #{msg.bright}"
+    STDERR.puts "#{ERRMSG[errno]}: #{who.red}: #{msg.bright}"
     exit errno # Usage Error
   end
   def self.usage(msg)
@@ -454,7 +454,7 @@ class Cucumber < Magni
     # There is stuff todo when something fails.
     # Needed by class Test below.
     Exit.dataerr "There were Cucumber errors" unless pass
-    puts "All Cucumber tests passed".colorize(:green)
+    puts "All Cucumber tests passed".green
   end
   def progress
     Cucumber.progress
@@ -501,11 +501,11 @@ class Ruby < Magni
       _, stderr, process = Open3.capture3("ruby -c #{fn}")
       unless process.exitstatus == 0
         count += 1
-        puts stderr.chomp.colorize(:red)
+        puts stderr.chomp.red
       end
     end
     Exit.dataerr "There were syntax errors" unless count == 0
-    puts "No syntax errors found.".colorize(:green)
+    puts "No syntax errors found.".green
   end
   desc 'syntax', 'Quick ruby syntax check'
   def syntax
@@ -522,7 +522,7 @@ class Ruby < Magni
       end
     end
     Exit.dataerr "There were unit-test errors" unless pass
-    puts "All unit-tests passed".colorize(:green)
+    puts "All unit-tests passed".green
   end
   desc 'test [pattern]', 'Runs the test files filtered by optional filename pattern'
   def test(pattern='.')
@@ -590,7 +590,7 @@ class Ruby < Magni
      [rrun, '# runtime requirements', true, false],
      [rdev, '# development requirements', true, false],
     ].each do |libs, desc, system, join|
-      puts desc.colorize(:blue)
+      puts desc.blue
       if join
         puts libs.map{|l| l.bright}.join(', ')
       else
@@ -609,7 +609,7 @@ class General < Magni
     project = Project.instance
     project.attributes.each do |attr|
       label = "#{attr}:".ljust(16)
-      puts "#{label}#{project[attr].to_s.colorize(:blue)}"
+      puts "#{label}#{project[attr].to_s.blue}"
     end
   end
 
@@ -620,7 +620,7 @@ class General < Magni
     project.attributes.each do |attr|
       if project.method(attr).call().nil?
         pass = false
-        STDERR.puts "#{attr} undefined".colorize(:red)
+        STDERR.puts "#{attr} undefined".red
       end
     end
     Exit.dataerr 'Project had missing attributes' unless pass
@@ -740,14 +740,14 @@ class General < Magni
       print "#{File.basename(f)}: "
       if File.exist?(f)
         if ['.irbrc'].include? f
-          puts checkmark.encode('utf-8').colorize(:darkgreen)
+          puts checkmark.encode('utf-8').green
         else
           if system "colordiff --ignore-matching-lines='version =' #{template}/#{f} #{f}"
-            puts checkmark.encode('utf-8').colorize(:darkgreen)
+            puts checkmark.encode('utf-8').green
           end
         end
       else
-        puts cross.encode.colorize(:darkred)
+        puts cross.encode.red
       end
     end
     f = '.git/hooks/pre-commit'
@@ -763,10 +763,10 @@ class General < Magni
     print "pre-commit: "
     if File.exist?(f)
       if system "colordiff #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
-        puts checkmark.encode('utf-8').colorize(:darkgreen)
+        puts checkmark.encode('utf-8').green
       end
     else
-      puts cross.encode.colorize(:darkred)
+      puts cross.encode.red
     end
   end
 end
