@@ -7,18 +7,18 @@ require 'fileutils'
 require 'singleton'
 require 'date'
 
+# Gems
 require 'helpema'
 HELPEMA::Helpema.requires <<GEMS
   colorize ~>0.8
 GEMS
 
+VERSION = '7.22.200127'
+TODO    = 'TODO.txt'
+README  = 'README.md'
+HISTORY = 'History.txt'
 
 class Magni < Thor
-  VERSION = '0.0.200127'
-  TODO    = 'TODO.txt'
-  README  = 'README.md'
-  HISTORY = 'History.txt'
-
   class << Magni; attr_accessor :warned; end
   Magni.warned = false
 
