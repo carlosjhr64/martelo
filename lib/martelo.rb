@@ -126,18 +126,19 @@ class Magni < Thor
   def initialize(*params)
     super
     @wd = Dir.getwd
-    warnings = proc { get_status_porcelain }
+    warnings = proc { get_warnings }
     ObjectSpace.define_finalizer(self, warnings)
   end
 
   private
 
-  def get_status_porcelain
+  def get_warnings
     unless Magni.warned
-      Magni.warned = true
+      Magni.warned =_= true
       goto_git
-      puts `git status --porcelain`.yellow
+      puts _.yellow  unless (_=`git status --porcelain`.strip) == ''
       goto_wd
+      puts _.yellow  unless (_=`thor version`.strip) == 'Thor 1.0.1'
     end
   end
 
