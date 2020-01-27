@@ -110,6 +110,41 @@ module GIT
   end
 end
 
+# gem command wraps
+class GEM
+  def GEM.which(lib)
+    `gem which '#{lib}'`
+  end
+
+  def GEM.version(lib)
+    if GEM.which(lib)=~/\b([\w\-]+)-(\d+\.\d+(\.\d+)?)\b/
+      return $1, $2
+    end
+    return lib, nil
+  end
+
+  def GEM.build
+    project = Project.instance
+    EXIT.dataerr "Found gem files in working directory" unless project.gems.length == 0
+    EXIT.dataerr "Git status not clear" unless GIT.status_porcelain.length == 0
+    gemspec = project.gemspec
+    system("gem build #{gemspec}") or EXIT.couldnt "Could not build gem"
+  end
+
+  def GEM.push(version)
+    gem = Project.instance.uniq
+    EXIT.software "#{version} did not match gem file" unless gem.include?(version)
+    pkgem = File.join('pkg', gem)
+    EXIT.protocol "#{pkgem} exists!?" if File.exist?(pkgem)
+    if system "gem push #{gem}"
+      File.rename gem, pkgem
+      Write.add_history(pkgem)
+    else
+      EXIT.unavailable "Could not push #{gem}"
+    end
+  end
+end
+
 ### Project attributes ###
 
 class Project
@@ -250,43 +285,10 @@ class Git < Magni
   end
 end
 
-# gem command wraps
 class Gem < Magni
-
-  def self.which(lib)
-    `gem which '#{lib}'`
-  end
-
-  def self.version(lib)
-    if Gem.which(lib)=~/\b([\w\-]+)-(\d+\.\d+(\.\d+)?)\b/
-      return $1, $2
-    end
-    return lib, nil
-  end
-
-  def self.build
-    project = Project.instance
-    EXIT.dataerr "Found gem files in working directory" unless project.gems.length == 0
-    EXIT.dataerr "Git status not clear" unless GIT.status_porcelain.length == 0
-    gemspec = project.gemspec
-    system("gem build #{gemspec}") or EXIT.couldnt "Could not build gem"
-  end
   desc "build", "Builds gem from gemspec"
   def build
-    Gem.build
-  end
-
-  def self.push(version)
-    gem = Project.instance.uniq
-    EXIT.software "#{version} did not match gem file" unless gem.include?(version)
-    pkgem = File.join('pkg', gem)
-    EXIT.protocol "#{pkgem} exists!?" if File.exist?(pkgem)
-    if system "gem push #{gem}"
-      File.rename gem, pkgem
-      Write.add_history(pkgem)
-    else
-      EXIT.unavailable "Could not push #{gem}"
-    end
+    GEM.build
   end
 end
 
@@ -565,7 +567,7 @@ class Ruby < Magni
         when /^\s*require\s['"]([^'"]+)['"]/
           lib = $1
           unless lib =~ /^#{name}\b/
-            lib, version = Gem.version(lib) # lib might translate
+            lib, version = GEM.version(lib) # lib might translate
             versions[lib] = version unless versions.has_key?(lib)
             if versions[lib]
               if run
@@ -662,8 +664,8 @@ class General < Magni
     tags = GIT.tag_list
     EXIT.usage "'#{version}' in git tag list" if tags.include?(version)
     test # Ensure all tests pass
-    Gem.build
-    Gem.push(version)
+    GEM.build
+    GEM.push(version)
     GIT.commit_and_push(version)
   end
 
