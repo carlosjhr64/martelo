@@ -1,94 +1,30 @@
 #!ruby
 
-# Standard Libraries
+### Standard Libraries ###
+
 require 'find'
 require 'open3'
 require 'fileutils'
 require 'singleton'
 require 'date'
 
-# Gems
+### Gems ###
+
 require 'helpema'
 HELPEMA::Helpema.requires <<GEMS
   colorize ~>0.8
 GEMS
+
+### Project's constants ###
 
 VERSION = '7.22.200127'
 TODO    = 'TODO.txt'
 README  = 'README.md'
 HISTORY = 'History.txt'
 
-class Magni < Thor
-  class << Magni; attr_accessor :warned; end
-  Magni.warned = false
+### Helper modules ###
 
-  def initialize(*params)
-    super
-    @wd = Dir.getwd
-    warnings = proc { get_status_porcelain }
-    ObjectSpace.define_finalizer(self, warnings)
-  end
-
-  private
-
-  def get_status_porcelain
-    unless Magni.warned
-      Magni.warned = true
-      goto_git
-      puts `git status --porcelain`.yellow
-      goto_wd
-    end
-  end
-
-  def goto_git
-    # This file, lib/martelo.rb, is expected to be symlinked by tasks.thor.
-    # Thor will see __FILE__ as tasks.thor, so goto tasks.thor's directory.
-    Dir.chdir File.dirname __FILE__
-    # Now read the symlink to get martelo's git directory and goto it.
-    Dir.chdir File.dirname File.dirname File.expand_path File.readlink __FILE__
-  end
-
-  def goto_wd
-    Dir.chdir @wd
-  end
-end
-
-class Tasks < Magni
-  include FileUtils::Verbose
-
-  desc 'commit', "commits tasks.thor's edits"
-  def commit
-    goto_git
-    system('git commit -a') and system('git push')
-    goto_wd
-  end
-
-  desc 'diff', "tasks.thor's `git diff`"
-  long_desc <<-LONGDESC
-    tasks.thor's file links to lib/martelo.rb's git.
-    Edits to tasks.thor are done in this git.
-    Use tasks:diff to diff the git.
-  LONGDESC
-  def diff
-    goto_git
-    system 'git diff'
-    goto_wd
-  end
-
-  desc 'edit', 'Edit tasks.thor'
-  def edit
-    system "vim #{__FILE__}"
-    system "ruby -c #{__FILE__}"
-  end
-
-  desc 'revert', "reverts to tasks.thor's last commit"
-  def revert
-    goto_git
-    system 'git checkout lib/martelo.rb'
-    goto_wd
-  end
-end
-
+# Exit messages
 module Exit
   ERRMSG = {
     64 => 'Usage',
@@ -178,6 +114,77 @@ class Project
 
   def [](attr)
     self.method(attr).call
+  end
+end
+
+### Thor sub-classes ###
+
+class Magni < Thor
+  class << Magni; attr_accessor :warned; end
+  Magni.warned = false
+
+  def initialize(*params)
+    super
+    @wd = Dir.getwd
+    warnings = proc { get_status_porcelain }
+    ObjectSpace.define_finalizer(self, warnings)
+  end
+
+  private
+
+  def get_status_porcelain
+    unless Magni.warned
+      Magni.warned = true
+      goto_git
+      puts `git status --porcelain`.yellow
+      goto_wd
+    end
+  end
+
+  def goto_git
+    # This file, lib/martelo.rb, is expected to be symlinked by tasks.thor.
+    # Thor will see __FILE__ as tasks.thor, so goto tasks.thor's directory.
+    Dir.chdir File.dirname __FILE__
+    # Now read the symlink to get martelo's git directory and goto it.
+    Dir.chdir File.dirname File.dirname File.expand_path File.readlink __FILE__
+  end
+
+  def goto_wd
+    Dir.chdir @wd
+  end
+end
+
+class Tasks < Magni
+  desc 'commit', "commits tasks.thor's edits"
+  def commit
+    goto_git
+    system('git commit -a') and system('git push')
+    goto_wd
+  end
+
+  desc 'diff', "tasks.thor's `git diff`"
+  long_desc <<-LONGDESC
+    tasks.thor's file links to lib/martelo.rb's git.
+    Edits to tasks.thor are done in this git.
+    Use tasks:diff to diff the git.
+  LONGDESC
+  def diff
+    goto_git
+    system 'git diff'
+    goto_wd
+  end
+
+  desc 'edit', 'Edit tasks.thor'
+  def edit
+    system "vim #{__FILE__}"
+    system "ruby -c #{__FILE__}"
+  end
+
+  desc 'revert', "reverts to tasks.thor's last commit"
+  def revert
+    goto_git
+    system 'git checkout lib/martelo.rb'
+    goto_wd
   end
 end
 
