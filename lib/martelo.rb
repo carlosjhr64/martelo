@@ -1,4 +1,5 @@
 #!ruby
+VERSION = '7.22.200127'
 
 ### Standard Libraries ###
 
@@ -17,15 +18,15 @@ GEMS
 
 ### Project's constants ###
 
-VERSION = '7.22.200127'
-TODO    = 'TODO.txt'
-README  = 'README.md'
-HISTORY = 'History.txt'
+TODO         = 'TODO.txt'
+README       = 'README.md'
+HISTORY      = 'History.txt'
+THOR_VERSION = 'Thor 1.0.1'
 
 ### Helpers ###
 
 # Exit messages
-module Exit
+module EXIT
   ERRMSG = {
     64 => 'Usage',
     73 => 'CantCreat',
@@ -34,32 +35,79 @@ module Exit
     70 => 'Software',
     76 => 'Protocol',
   }
-  def self.message(msg, errno, file, line, method)
+  def EXIT.message(msg, errno, file, line, method)
     who = "#{File.basename(file)}, ##{line}, #{method}"
     STDERR.puts "#{ERRMSG[errno]}: #{who.red}: #{msg}"
     exit errno # Usage Error
   end
-  def self.usage(msg)
-    Exit.message(msg, 64, *caller[0].split(/:/))
+  def EXIT.usage(msg)
+    EXIT.message(msg, 64, *caller[0].split(/:/))
   end
-  def self.couldnt(msg)
-    Exit.message(msg, 73, *caller[0].split(/:/))
+  def EXIT.couldnt(msg)
+    EXIT.message(msg, 73, *caller[0].split(/:/))
   end
-  def self.unavailable(msg)
-    Exit.message(msg, 69, *caller[0].split(/:/))
+  def EXIT.unavailable(msg)
+    EXIT.message(msg, 69, *caller[0].split(/:/))
   end
-  def self.dataerr(msg)
-    Exit.message(msg, 65, *caller[0].split(/:/))
+  def EXIT.dataerr(msg)
+    EXIT.message(msg, 65, *caller[0].split(/:/))
   end
-  def self.software(msg) # AKA Bug!
-    Exit.message(msg, 70, *caller[0].split(/:/))
+  def EXIT.software(msg) # AKA Bug!
+    EXIT.message(msg, 70, *caller[0].split(/:/))
   end
-  def self.protocol(msg) # WTF!?
-    Exit.message(msg, 76, *caller[0].split(/:/))
+  def EXIT.protocol(msg) # WTF!?
+    EXIT.message(msg, 76, *caller[0].split(/:/))
   end
 end
 
-# Project attributes
+module GIT
+  def GIT.commit_all
+    system('git commit -a')
+  end
+
+  def GIT.push
+    system('git push')
+  end
+
+  def GIT.tag_list
+    `git tag --list`.strip.split("\n")
+  end
+
+  def GIT.status_porcelain
+    `git status --porcelain`.strip
+  end
+
+  def GIT.status
+    `git status`.strip
+  end
+
+  def GIT.user_name
+    `git config user.name`.strip
+  end
+
+  def GIT.user_email
+    `git config user.email`.strip
+  end
+
+  LS_FILES = 'git ls-files'
+  def GIT.ls_files
+    filter, gemig = '', '.gemignore'
+    if File.exist?(gemig)
+      filter = File.read(gemig).strip.gsub(/\s+/,'')
+      filter = " | egrep -v '#{filter}'"
+    end
+    `#{LS_FILES}#{filter}`.strip
+  end
+
+  def GIT.commit_and_push(tag)
+    system("git commit -a -m '#{tag}'")   or EXIT.couldnt   "git could not commit"
+    system("git tag '#{tag}'")            or EXIT.couldnt   "git could not tag"
+    system('git push')                    or EXIT.unavaible "git could not push"
+  end
+end
+
+### Project attributes ###
+
 class Project
   include Singleton
 
@@ -81,19 +129,19 @@ class Project
     @wd = wd
 
     @readme      = README
-    description  = File.read(@readme).match(/\n[=#]+\s*DESCRIPTION:?(.*?)\n[=#]/mi)[1].strip
+    description  = File.read(@readme).match(/\n#+\s*DESCRIPTION:?(.*?)\n#/mi)[1].strip
     @description = description.split(/\n\n/)[0..1].join("\n\n").strip
     @summary     = description.split(/\n\n/).first.strip
 
     @name        = File.basename(@wd).split(/\-/).first
     @gemspec     = "#{@name}.gemspec"
 
-    @version = `egrep -h 'VERSION\s*=' lib/*/version.rb lib/*.rb bin/* 2> /dev/null`.match(/(\d+\.\d+\.\d+)/)[1]
+    @version     = `egrep '^\\s*VERSION\\s*=' lib/*.rb 2> /dev/null`.match(/(\d+\.\d+\.\d+)/)[1]
 
     @date        = Date.today.to_s
 
-    @author      = Git.user_name
-    @email       = Git.user_email
+    @author      = GIT.user_name
+    @email       = GIT.user_email
 
     @gems        = Dir.glob('*.gem')
     @pkgems      = Dir.glob('pkg/*.gem')
@@ -104,7 +152,7 @@ class Project
   end
 
   def uniq
-    Exit.software "Did not get unique gem file" unless gems!.length == 1
+    EXIT.software "Did not get unique gem file" unless gems!.length == 1
     @gems.first
   end
 
@@ -135,14 +183,14 @@ class Magni < Thor
   def get_warnings
     unless Magni.warned
       Magni.warned =_= true
-      goto_git
-      puts _.yellow  unless (_=`git status --porcelain`.strip) == ''
+      goto_martelo
+      puts _.yellow  unless (_=GIT.status_porcelain) == ''
       goto_wd
-      puts _.yellow  unless (_=`thor version`.strip) == 'Thor 1.0.1'
+      puts _.yellow  unless (_=`thor version`.strip) == THOR_VERSION
     end
   end
 
-  def goto_git
+  def goto_martelo
     # This file, lib/martelo.rb, is expected to be symlinked by tasks.thor.
     # Thor will see __FILE__ as tasks.thor, so goto tasks.thor's directory.
     Dir.chdir File.dirname __FILE__
@@ -158,8 +206,8 @@ end
 class Tasks < Magni
   desc 'commit', "commits tasks.thor's edits"
   def commit
-    goto_git
-    system('git commit -a') and system('git push')
+    goto_martelo
+    GIT.commit_all and GIT.push
     goto_wd
   end
 
@@ -170,7 +218,7 @@ class Tasks < Magni
     Use tasks:diff to diff the git.
   LONGDESC
   def diff
-    goto_git
+    goto_martelo
     system 'git diff'
     goto_wd
   end
@@ -183,7 +231,7 @@ class Tasks < Magni
 
   desc 'revert', "reverts to tasks.thor's last commit"
   def revert
-    goto_git
+    goto_martelo
     system 'git checkout lib/martelo.rb'
     goto_wd
   end
@@ -191,46 +239,10 @@ end
 
 # git command wraps
 class Git < Magni
-  def self.tag_list
-    `git tag --list`.strip.split("\n")
-  end
-
-  def self.status_porcelain
-    `git status --porcelain`.strip
-  end
-
-  def self.status
-    `git status`.strip
-  end
-
-  def self.user_name
-    `git config user.name`.strip
-  end
-
-  def self.user_email
-    `git config user.email`.strip
-  end
-
-  LS_FILES = 'git ls-files'
-  def self.ls_files
-    filter, gemig = '', '.gemignore'
-    if File.exist?(gemig)
-      filter = File.read(gemig).strip.gsub(/\s+/,'')
-      filter = " | egrep -v '#{filter}'"
-    end
-    `#{LS_FILES}#{filter}`.strip
-  end
-
-  def self.commit_and_push(tag)
-    system("git commit -a -m '#{tag}'")   or Exit.couldnt   "git could not commit"
-    system("git tag '#{tag}'")            or Exit.couldnt   "git could not tag"
-    system('git push')                    or Exit.unavaible "git could not push"
-  end
-
   desc 'commit_and_push "tag"', 'git commit and push with tag'
   def commit_and_push(tag)
-    Exit.usage "'#{tag}' in git tag list" if Git.tag_list.include?(tag)
-    Git.commit_and_push(tag)
+    EXIT.usage "'#{tag}' in git tag list" if GIT.tag_list.include?(tag)
+    GIT.commit_and_push(tag)
   end
 end
 
@@ -250,10 +262,10 @@ class Gem < Magni
 
   def self.build
     project = Project.instance
-    Exit.dataerr "Found gem files in working directory" unless project.gems.length == 0
-    Exit.dataerr "Git status not clear" unless Git.status_porcelain.length == 0
+    EXIT.dataerr "Found gem files in working directory" unless project.gems.length == 0
+    EXIT.dataerr "Git status not clear" unless GIT.status_porcelain.length == 0
     gemspec = project.gemspec
-    system("gem build #{gemspec}") or Exit.couldnt "Could not build gem"
+    system("gem build #{gemspec}") or EXIT.couldnt "Could not build gem"
   end
   desc "build", "Builds gem from gemspec"
   def build
@@ -262,14 +274,14 @@ class Gem < Magni
 
   def self.push(version)
     gem = Project.instance.uniq
-    Exit.software "#{version} did not match gem file" unless gem.include?(version)
+    EXIT.software "#{version} did not match gem file" unless gem.include?(version)
     pkgem = File.join('pkg', gem)
-    Exit.protocol "#{pkgem} exists!?" if File.exist?(pkgem)
+    EXIT.protocol "#{pkgem} exists!?" if File.exist?(pkgem)
     if system("gem push #{gem}")
       File.rename gem, pkgem
       Write.add_history(pkgem)
     else
-      Exit.unavailable "Could not push #{gem}"
+      EXIT.unavailable "Could not push #{gem}"
     end
   end
 end
@@ -401,7 +413,7 @@ class Write < Magni
     name = project.name
     author = project.author
     readme = project.readme
-    ls_files = Git.ls_files
+    ls_files = GIT.ls_files
     executable = ls_files.include? File.join('bin',name)
 
     File.open(project.gemspec, 'w') do |gemspec|
@@ -446,7 +458,7 @@ EOT
         hst.puts `md5sum #{pkgem}`
       end
     else
-      Exit.software("Could not get version from pkgem: #{pkgem}")
+      EXIT.software("Could not get version from pkgem: #{pkgem}")
     end
   end
 end
@@ -461,7 +473,7 @@ class Cucumber < Magni
     system('cucumber -f progress') or pass = false
     # There is stuff todo when something fails.
     # Needed by class Test below.
-    Exit.dataerr "There were Cucumber errors" unless pass
+    EXIT.dataerr "There were Cucumber errors" unless pass
     puts "All Cucumber tests passed".green
   end
   def progress
@@ -474,7 +486,7 @@ class Ruby < Magni
 
   def self.files
     #Find.find('.') do |fn|
-    Git.ls_files.split("\n").each do |fn|
+    GIT.ls_files.split("\n").each do |fn|
       begin
         yield(fn) if (fn =~ /\.((rb)|(thor))$/) or
         (File.file?(fn) and File.executable?(fn) and (File.open(fn, &:gets) =~ /^#!.*\bruby/))
@@ -512,7 +524,7 @@ class Ruby < Magni
         puts stderr.chomp.red
       end
     end
-    Exit.dataerr "There were syntax errors" unless count == 0
+    EXIT.dataerr "There were syntax errors" unless count == 0
     puts "No syntax errors found.".green
   end
   desc 'syntax', 'Quick ruby syntax check'
@@ -529,7 +541,7 @@ class Ruby < Magni
         system("ruby -I ./lib #{fn}") unless fn=~/manually.rb$/
       end
     end
-    Exit.dataerr "There were unit-test errors" unless pass
+    EXIT.dataerr "There were unit-test errors" unless pass
     puts "All unit-tests passed".green
   end
   desc 'test [pattern]', 'Runs the test files filtered by optional filename pattern'
@@ -631,7 +643,7 @@ class General < Magni
         STDERR.puts "#{attr} undefined".red
       end
     end
-    Exit.dataerr 'Project had missing attributes' unless pass
+    EXIT.dataerr 'Project had missing attributes' unless pass
     Ruby.syntax
     Ruby.test if File.exist?('./test')
     Cucumber.progress if File.exist?('./features')
@@ -641,14 +653,14 @@ class General < Magni
   def publish(version)
     project = Project.instance
     current = project.version
-    Exit.usage   "Current version is #{current}, not #{version}." unless current == version
-    Exit.dataerr "Found gem files in working directory"           unless project.gems.length == 0
-    tags = Git.tag_list
-    Exit.usage "'#{version}' in git tag list" if tags.include?(version)
+    EXIT.usage   "Current version is #{current}, not #{version}." unless current == version
+    EXIT.dataerr "Found gem files in working directory"           unless project.gems.length == 0
+    tags = GIT.tag_list
+    EXIT.usage "'#{version}' in git tag list" if tags.include?(version)
     test # Ensure all tests pass
     Gem.build
     Gem.push(version)
-    Git.commit_and_push(version)
+    GIT.commit_and_push(version)
   end
 
   desc 'update_force', 'Updates gemspec and todo inspite of git status.'
@@ -656,7 +668,7 @@ class General < Magni
     invoke 'write:gemspec'
     invoke 'write:todo'
     invoke 'write:help' if File.exist? "./bin/#{Project.instance.name}"
-    if Git.status_porcelain.length == 0
+    if GIT.status_porcelain.length == 0
       puts "Gemspec and todo where uptodate."
     else
       puts "OK, now verify the changes and update git."
@@ -665,15 +677,15 @@ class General < Magni
 
   desc 'update', 'Updates gemspec and todo'
   def update
-    Exit.dataerr "Git status not clear" unless Git.status_porcelain.length == 0
+    EXIT.dataerr "Git status not clear" unless GIT.status_porcelain.length == 0
     update_force
   end
 
   desc 'sow name', 'Creates a template gem diretory in the working directory'
   def sow(gemname)
-    Exit.usage "Expected a proper gem name(=~/^[a-z]+$/)" unless //.match?(gemname)
-    Exit.couldnt "#{gemname} exists." if File.exist?(gemname)
-    Exit.couldnt "git init has problems?" unless system("git init #{gemname}")
+    EXIT.usage "Expected a proper gem name(=~/^[a-z]+$/)" unless //.match?(gemname)
+    EXIT.couldnt "#{gemname} exists." if File.exist?(gemname)
+    EXIT.couldnt "git init has problems?" unless system("git init #{gemname}")
     template = File.join(__dir__,'template')
     if File.directory?(template)
       packing_list = File.join(template, 'packing-list')
@@ -723,7 +735,7 @@ class General < Magni
                 end
               end
             else
-              Exit.dataerr "packing-list in unrecognized state."
+              EXIT.dataerr "packing-list in unrecognized state."
             end
           end
         end
