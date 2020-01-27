@@ -1,26 +1,30 @@
 #!ruby
+
+# Standard Libraries
 require 'find'
-require 'rainbow'; require 'rainbow/ext/string'
 require 'open3'
 require 'fileutils'
 require 'singleton'
 require 'date'
 
-module Config
-  VERSION = '0.0.200126'
-  BACKUP  = File.expand_path '~/Dropbox/tasks.thor'
-  HISTORY = 'History.txt'
-  README  = (File.exist?(_='README.rdoc'))? _ : 'README.md'
-  TODO    = 'TODO.txt'
-  VFILE   = 'version.rb'
-  VINIT   = '0.0.0'
-end
+require 'helpema'
+HELPEMA::Helpema.requires <<GEMS
+  colorize ~>0.8
+GEMS
+
 
 class Magni < Thor
+  VERSION = '0.0.200127'
+  TODO    = 'TODO.txt'
+  README  = 'README.md'
+  HISTORY = 'History.txt'
+
+  class << Magni; attr_accessor :warned; end
+  Magni.warned = false
+
   def initialize(*params)
     super
     @wd = Dir.getwd
-    @warned = false
     warnings = proc { get_status_porcelain }
     ObjectSpace.define_finalizer(self, warnings)
   end
@@ -28,10 +32,10 @@ class Magni < Thor
   private
 
   def get_status_porcelain
-    unless @warned
-      @warned = true
+    unless Magni.warned
+      Magni.warned = true
       goto_git
-      puts `git status --porcelain`.color :orange
+      puts `git status --porcelain`.colorize(:yellow)
       goto_wd
     end
   end
@@ -96,7 +100,7 @@ module Exit
   }
   def self.message(msg, errno, file, line, method)
     who = "#{File.basename(file)}, ##{line}, #{method}"
-    STDERR.puts "#{ERRMSG[errno]}: #{who.color(:red)}: #{msg.bright}"
+    STDERR.puts "#{ERRMSG[errno]}: #{who.colorize(:red)}: #{msg.bright}"
     exit errno # Usage Error
   end
   def self.usage(msg)
@@ -140,7 +144,7 @@ class Project
   def initialize(wd=Dir.getwd)
     @wd = wd
 
-    @readme      = Config::README
+    @readme      = README
     description  = File.read(@readme).match(/\n[=#]+\s*DESCRIPTION:?(.*?)\n[=#]/mi)[1].strip
     @description = description.split(/\n\n/)[0..1].join("\n\n").strip
     @summary     = description.split(/\n\n/).first.strip
@@ -279,9 +283,9 @@ class Write < Magni
       $stderr.puts "Can't update help section, executable does not exist: #{executable}"
       return
     end
-    lines = (File.exist?(Config::README))? File.readlines(Config::README) : []
+    lines = (File.exist?(README))? File.readlines(README) : []
     wrote = skip = false
-    File.open(Config::README, 'w') do |io|
+    File.open(README, 'w') do |io|
       while line = lines.shift
         skip = false if line=~/^##/
         next if skip
@@ -316,9 +320,9 @@ class Write < Magni
 
   desc 'todo', 'Writes/Updates the todo file'
   def todo
-    lines = (File.exist?(Config::TODO))? File.readlines(Config::TODO) : []
+    lines = (File.exist?(TODO))? File.readlines(TODO) : []
     wrote = skip = false
-    File.open(Config::TODO, 'w') do |io|
+    File.open(TODO, 'w') do |io|
       while line = lines.shift
         skip = false if line=~/^==/
         next if skip
@@ -429,7 +433,7 @@ EOT
   def self.add_history(pkgem)
     if pkgem=~/-(\d+\.\d+\.\d+)\.gem$/
       version = $1
-      File.open(Config::HISTORY, 'a') do |hst|
+      File.open(HISTORY, 'a') do |hst|
         hst.puts "# #{version} / #{Time.now}"
         hst.puts `md5sum #{pkgem}`
       end
@@ -450,7 +454,7 @@ class Cucumber < Magni
     # There is stuff todo when something fails.
     # Needed by class Test below.
     Exit.dataerr "There were Cucumber errors" unless pass
-    puts "All Cucumber tests passed".color(:green)
+    puts "All Cucumber tests passed".colorize(:green)
   end
   def progress
     Cucumber.progress
@@ -497,11 +501,11 @@ class Ruby < Magni
       _, stderr, process = Open3.capture3("ruby -c #{fn}")
       unless process.exitstatus == 0
         count += 1
-        puts stderr.chomp.color(:red)
+        puts stderr.chomp.colorize(:red)
       end
     end
     Exit.dataerr "There were syntax errors" unless count == 0
-    puts "No syntax errors found.".color(:green)
+    puts "No syntax errors found.".colorize(:green)
   end
   desc 'syntax', 'Quick ruby syntax check'
   def syntax
@@ -518,7 +522,7 @@ class Ruby < Magni
       end
     end
     Exit.dataerr "There were unit-test errors" unless pass
-    puts "All unit-tests passed".color(:green)
+    puts "All unit-tests passed".colorize(:green)
   end
   desc 'test [pattern]', 'Runs the test files filtered by optional filename pattern'
   def test(pattern='.')
@@ -586,7 +590,7 @@ class Ruby < Magni
      [rrun, '# runtime requirements', true, false],
      [rdev, '# development requirements', true, false],
     ].each do |libs, desc, system, join|
-      puts desc.color(:blue)
+      puts desc.colorize(:blue)
       if join
         puts libs.map{|l| l.bright}.join(', ')
       else
@@ -605,7 +609,7 @@ class General < Magni
     project = Project.instance
     project.attributes.each do |attr|
       label = "#{attr}:".ljust(16)
-      puts "#{label}#{project[attr].to_s.color(:blue)}"
+      puts "#{label}#{project[attr].to_s.colorize(:blue)}"
     end
   end
 
@@ -616,7 +620,7 @@ class General < Magni
     project.attributes.each do |attr|
       if project.method(attr).call().nil?
         pass = false
-        STDERR.puts "#{attr} undefined".color(:red)
+        STDERR.puts "#{attr} undefined".colorize(:red)
       end
     end
     Exit.dataerr 'Project had missing attributes' unless pass
@@ -736,14 +740,14 @@ class General < Magni
       print "#{File.basename(f)}: "
       if File.exist?(f)
         if ['.irbrc'].include? f
-          puts checkmark.encode('utf-8').color(:darkgreen)
+          puts checkmark.encode('utf-8').colorize(:darkgreen)
         else
           if system "colordiff --ignore-matching-lines='version =' #{template}/#{f} #{f}"
-            puts checkmark.encode('utf-8').color(:darkgreen)
+            puts checkmark.encode('utf-8').colorize(:darkgreen)
           end
         end
       else
-        puts cross.encode.color(:darkred)
+        puts cross.encode.colorize(:darkred)
       end
     end
     f = '.git/hooks/pre-commit'
@@ -759,10 +763,10 @@ class General < Magni
     print "pre-commit: "
     if File.exist?(f)
       if system "colordiff #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
-        puts checkmark.encode('utf-8').color(:darkgreen)
+        puts checkmark.encode('utf-8').colorize(:darkgreen)
       end
     else
-      puts cross.encode.color(:darkred)
+      puts cross.encode.colorize(:darkred)
     end
   end
 end
