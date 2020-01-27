@@ -9,7 +9,6 @@ require 'date'
 module Config
   VERSION = '0.0.200126'
   BACKUP  = File.expand_path '~/Dropbox/tasks.thor'
-  EDITOR  = 'vim'
   HISTORY = 'History.txt'
   README  = (File.exist?(_='README.rdoc'))? _ : 'README.md'
   TODO    = 'TODO.txt'
@@ -69,17 +68,20 @@ class Tasks < Magni
   def diff
     goto_git
     system 'git diff'
+    goto_wd
   end
 
-  desc 'edit', 'Edit the task'
+  desc 'edit', 'Edit tasks.thor'
   def edit
-    system "#{Config::EDITOR} #{__FILE__}"
+    system "vim #{__FILE__}"
     system "ruby -c #{__FILE__}"
   end
 
-  desc 'revert', 'Reverts to backup'
+  desc 'revert', "reverts to tasks.thor's last commit"
   def revert
-    cp Config::BACKUP, __FILE__
+    goto_git
+    system 'git checkout lib/martelo.rb'
+    goto_wd
   end
 end
 
