@@ -22,18 +22,20 @@ class Magni < Thor
     super
     @wd = Dir.getwd
     @warned = false
-    warnings = proc {
-      unless @warned
-        @warned = true
-        goto_git
-        system 'git status --porcelain'
-        goto_wd
-      end
-    }
+    warnings = proc { get_status_porcelain }
     ObjectSpace.define_finalizer(self, warnings)
   end
 
   private
+
+  def get_status_porcelain
+    unless @warned
+      @warned = true
+      goto_git
+      puts `git status --porcelain`.color :red
+      goto_wd
+    end
+  end
 
   def goto_git
     # This file, lib/martelo.rb, is expected to be symlinked by tasks.thor.
