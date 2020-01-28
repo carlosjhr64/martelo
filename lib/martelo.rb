@@ -805,8 +805,8 @@ class General < Magni
     template  =  File.join(__dir__,'template')
     ok = true
     ####
-    ['.ruby-version', '.config.fish', '.gitignore', '.gemignore',
-     '.irbrc', 'test/tc_version', 'test/tc_readme_rocket_check'
+    ['.ruby-version', '.config.fish', '.gitignore', '.gemignore', '.irbrc',
+     'test/tc_version', 'test/tc_readme_rocket_check', 'test/tc_readme_spell',
     ].each do |f|
       case cp
       when nil
