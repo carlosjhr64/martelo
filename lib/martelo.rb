@@ -1,5 +1,5 @@
 #!ruby
-VERSION = '7.21.200127'
+VERSION = '7.21.200128'
 
 ### Standard Libraries ###
 
@@ -692,7 +692,7 @@ class General < Magni
     end
   end
 
-  desc 'sow name', 'Creates a template gem diretory in the working directory'
+  desc 'sow name', 'Creates a template gem directory in the working directory'
   def sow(gemname)
     EXIT.usage "Expected a proper gem name(=~/^[a-z]+$/)" unless //.match?(gemname)
     EXIT.couldnt "#{gemname} exists." if File.exist?(gemname)

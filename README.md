@@ -1,6 +1,6 @@
 # martelo
 
-* [VERSION 7.21.200127](https://github.com/carlosjhr64/martelo/releases)
+* [VERSION 7.21.200128](https://github.com/carlosjhr64/martelo/releases)
 * [github](https://www.github.com/carlosjhr64/martelo)
 
 ## DESCRIPTION:
@@ -25,7 +25,7 @@ Having said that, maybe others will find it useful.
     $ -------
     $ thor general:info             # Attributes of the project
     $ thor general:publish version  # Pushes to git and gems
-    $ thor general:sow name         # Creates a template gem diretory in the working directory
+    $ thor general:sow name         # Creates a template gem directory in the working directory
     $ thor general:template         # compares current workspace to template
     $ thor general:test             # Run all tests
     $ thor general:update           # Updates gemspec and todo
@@ -57,7 +57,7 @@ Having said that, maybe others will find it useful.
 
 ## INSTALL:
 
-Tipically you would have a gits directory where you keep your projects, and
+Typically you would have a gits directory where you keep your projects, and
 your tasks.thor file would be found there.
 These instructions do not allow for merging with existing tasks... sorry.
 But this is how I have things set up:
