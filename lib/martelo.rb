@@ -13,7 +13,8 @@ require 'date'
 
 require 'helpema'
 HELPEMA::Helpema.requires <<GEMS
-  colorize ~>0.8
+  rubbish  ~>0.2.0
+  colorize ~>0.8.0
 GEMS
 
 ### Project's constants ###
@@ -57,6 +58,23 @@ module EXIT
   end
   def EXIT.protocol(msg) # WTF!?
     EXIT.message(msg, 76, *caller[0].split(/:/))
+  end
+end
+
+module BASH
+  def BASH.wc(file)
+    Rubbish.bash("wc #{file}").split.map{|_|_.to_i}
+  end
+
+  def BASH.colordiff(f1, f2, options=nil, head: nil)
+    cmd = "colordiff "
+    cmd << options if options
+    if head
+      cmd << " <(head -n #{head} #{f1}) <(head -n #{head} #{f2})"
+    else
+      cmd << " #{f1} #{f2}"
+    end
+    Rubbish.bash(cmd, read: false)
   end
 end
 
@@ -776,7 +794,7 @@ class General < Magni
           if ['.irbrc'].include? f
             puts checkmark.encode('utf-8').green
           else
-            if system "colordiff --ignore-matching-lines='version =' #{template}/#{f} #{f}"
+            if BASH.colordiff("#{template}/#{f}", f, "--ignore-matching-lines='version ='")
               puts checkmark.encode('utf-8').green
             else
               ok &&= false
@@ -784,17 +802,18 @@ class General < Magni
           end
         else
           puts cross.encode.red
+          ok &&= false
         end
       when 'cp'
         unless File.exist? f
           puts "cp #{template}/#{f} #{f}"
-          system "cp #{template}/#{f} #{f}"
+          FileUtils.cp "#{template}/#{f}", f
           ok &&= false
         end
       when File.basename(f)
         if force or not File.exist? f
           puts "cp #{template}/#{f} #{f}"
-          system "cp #{template}/#{f} #{f}"
+          FileUtils.cp "#{template}/#{f}", f
         else
           puts "File exist!".red
         end
@@ -807,8 +826,8 @@ class General < Magni
     when nil
       print "pre-commit: "
       if File.exist?(f)
-        n = `wc #{template}/git_hooks/pre-commit`.split[0].to_i
-        if system "bash -c 'colordiff <(head -n #{n} #{template}/git_hooks/pre-commit) <(head -n #{n} .git/hooks/pre-commit)'"
+        n = BASH.wc("#{template}/git_hooks/pre-commit")[0]
+        if BASH.colordiff("#{template}/git_hooks/pre-commit", '.git/hooks/pre-commit', head: n)
           puts checkmark.encode('utf-8').green
         else
           ok &&= false
@@ -819,13 +838,13 @@ class General < Magni
     when 'cp'
       unless File.exist? f
         puts "cp #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
-        system "cp #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
+        FileUtils.cp "#{template}/git_hooks/pre-commit", '.git/hooks/pre-commit'
         ok &&= false
       end
     when 'pre-commit'
       if force or not File.exist? f
         puts "cp #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
-        system "cp #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
+        FileUtils.cp "#{template}/git_hooks/pre-commit", '.git/hooks/pre-commit'
       else
         puts "File exist!".red
       end
