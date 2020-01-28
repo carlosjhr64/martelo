@@ -1,5 +1,5 @@
 #!ruby
-VERSION = '7.21.200128'
+VERSION = '8.21.200128'
 
 ### Standard Libraries ###
 
@@ -677,16 +677,7 @@ class Ruby < Magni
   end
 end
 
-class General < Magni
-  desc "info", "Attributes of the project"
-  def info
-    project = Project.instance
-    project.attributes.each do |attr|
-      label = "#{attr}:".ljust(16)
-      puts "#{label}#{project[attr].to_s.blue}"
-    end
-  end
-
+class Do < Magni
   desc 'test', 'Run all tests'
   def test
     pass = true
@@ -790,6 +781,17 @@ class General < Magni
           end
         end
       end
+    end
+  end
+end
+
+class Get < Magni
+  desc "info", "Attributes of the project"
+  def info
+    project = Project.instance
+    project.attributes.each do |attr|
+      label = "#{attr}:".ljust(16)
+      puts "#{label}#{project[attr].to_s.blue}"
     end
   end
 
