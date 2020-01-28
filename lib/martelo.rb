@@ -76,6 +76,10 @@ module BASH
     end
     Rubbish.bash(cmd, read: false)
   end
+
+  def BASH.gsub(key, string, file)
+    Rubbish.bash "sed -i -e 's/\\b#{key}\\b/#{string}/g' #{file}"
+  end
 end
 
 module GIT
@@ -738,19 +742,19 @@ class General < Magni
                     puts "#{f1.ljust(30)} <= #{f0}"
                     FileUtils.mkdir_p(File.dirname(f1))
                     FileUtils.cp f0, f1
-                    system "sed -i -e 's/template/#{gemname}/g' #{f1}"
-                    system "sed -i -e 's/Template/#{gemname.capitalize}/g' #{f1}"
-                    system "sed -i -e 's/TEMPLATE/#{gemname.upcase}/g' #{f1}"
+                    BASH.gsub('Template', gemname.capitalize, f1)
+                    BASH.gsub('TEMPLATE', gemname.upcase, f1)
+                    BASH.gsub('template', gemname, f1)
                   end
                 end
               else
                 puts "#{to_path.ljust(30)} <= #{from_path}"
                 FileUtils.cp from_path, to_path
-                system "sed -i -e 's/template/#{gemname}/g' #{to_path}"
-                system "sed -i -e 's/Template/#{gemname.capitalize}/g' #{to_path}"
-                system "sed -i -e 's/TEMPLATE/#{gemname.upcase}/g' #{to_path}"
-                system "sed -i -e 's/\\byear\\b/#{year}/g' #{to_path}"
-                system "sed -i -e 's/\\bauthor\\b/#{author}/g' #{to_path}"
+                BASH.gsub('Template', gemname.capitalize, to_path)
+                BASH.gsub('TEMPLATE', gemname.upcase, to_path)
+                BASH.gsub('template', gemname, to_path)
+                BASH.gsub('author', author, to_path)
+                BASH.gsub('year', year, to_path)
               end
             when 'Directories:'
               puts to_path
