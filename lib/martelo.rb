@@ -507,7 +507,7 @@ end
 
 # git command wraps
 class Git < Magni
-  desc 'commit_and_push "tag"', 'git commit and push with tag'
+  desc 'commit_and_push <tag>', 'git commit and push with tag'
   def commit_and_push(tag)
     EXIT.usage "'#{tag}' in git tag list" if GIT.tag_list.include?(tag)
     GIT.commit_and_push(tag)
@@ -638,7 +638,7 @@ class Ruby < Magni
     RUBY.files{|fn| puts fn}
   end
 
-  desc 'tests [pattern]', 'Lists all unit tests matching optional filename pattern'
+  desc 'tests [<pattern>]', 'Lists all unit tests matching optional filename pattern'
   def tests(pattern='.')
     RUBY.tests(pattern){|fn| puts fn}
   end
@@ -648,7 +648,7 @@ class Ruby < Magni
     RUBY.syntax
   end
 
-  desc 'test [pattern]', 'Runs the test files filtered by optional filename pattern'
+  desc 'test [<pattern>]', 'Runs the test files filtered by optional filename pattern'
   def test(pattern='.')
     RUBY.test(pattern)
   end
@@ -694,7 +694,7 @@ class Do < Magni
     Cucumber.progress if File.exist?('./features')
   end
 
-  desc "publish version", "Pushes to git and gems"
+  desc "publish <version>", "Pushes to git and gems"
   def publish(version)
     project = Project.instance
     current = project.version
@@ -722,7 +722,7 @@ class Do < Magni
     end
   end
 
-  desc 'sow name', 'Creates a template gem directory in the working directory'
+  desc 'sow <gemname>', 'Creates a template gem directory in the working directory'
   def sow(gemname)
     EXIT.usage "Expected a proper gem name(=~/^[a-z]+$/)" unless //.match?(gemname)
     EXIT.couldnt "#{gemname} exists." if File.exist?(gemname)
