@@ -70,11 +70,14 @@ module SHELL
     `wc #{file}`.split.map{|_|_.to_i}
   end
 
-  def SHELL.colordiff(f1, f2, options=nil, head: nil)
+  def SHELL.colordiff(f1, f2, options=nil, filter: nil)
     cmd = "colordiff "
     cmd << options if options
-    if head
-      cmd << " <(head -n #{head} #{f1}) <(head -n #{head} #{f2})"
+    case filter
+    when Integer
+      cmd << " <(head -n #{filter} #{f1}) <(head -n #{filter} #{f2})"
+    when String
+      cmd << " <(egrep -v '#{filter}' #{f1}) <(egrep -v '#{filter}' #{f2})"
     else
       cmd << " #{f1} #{f2}"
     end
@@ -691,7 +694,7 @@ class Do < Magni
     EXIT.dataerr 'Project had missing attributes' unless pass
     RUBY.syntax
     RUBY.test if File.exist?('./test')
-    Cucumber.progress if File.exist?('./features')
+    CUCUMBER.progress if File.exist?('./features')
   end
 
   desc "publish <version>", "Pushes to git and gems"
@@ -808,7 +811,7 @@ class Get < Magni
     ok = true
     ####
     ['.ruby-version', '.config.fish', '.gitignore', '.gemignore', '.irbrc',
-     'test/tc_version', 'test/tc_readme_rocket_check', 'test/tc_readme_spell',
+     'test/tc_version', 'test/tc_readme_rocket_check', 'test/tc_readme_spell', 'test/tc_lexicon',
     ].each do |f|
       case cp
       when nil
@@ -817,7 +820,7 @@ class Get < Magni
           if ['.irbrc'].include? f
             puts checkmark.encode('utf-8').green
           else
-            if SHELL.colordiff("#{template}/#{f}", f, "--ignore-matching-lines='version ='")
+            if SHELL.colordiff("#{template}/#{f}", f, filter: '(version *=)|(Hexdigest)')
               puts checkmark.encode('utf-8').green
             else
               ok &&= false
@@ -850,7 +853,7 @@ class Get < Magni
       print "pre-commit: "
       if File.exist?(f)
         n = SHELL.wc("#{template}/git_hooks/pre-commit")[0]
-        if SHELL.colordiff("#{template}/git_hooks/pre-commit", '.git/hooks/pre-commit', head: n)
+        if SHELL.colordiff("#{template}/git_hooks/pre-commit", '.git/hooks/pre-commit', filter: n)
           puts checkmark.encode('utf-8').green
         else
           ok &&= false
