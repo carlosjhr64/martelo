@@ -61,12 +61,16 @@ module EXIT
   end
 end
 
-module BASH
-  def BASH.wc(file)
+module SHELL
+  def SHELL.vim(file)
+    system "vim #{file}"
+  end
+
+  def SHELL.wc(file)
     `wc #{file}`.split.map{|_|_.to_i}
   end
 
-  def BASH.colordiff(f1, f2, options=nil, head: nil)
+  def SHELL.colordiff(f1, f2, options=nil, head: nil)
     cmd = "colordiff "
     cmd << options if options
     if head
@@ -77,7 +81,7 @@ module BASH
     Rubbish.bash(cmd, read: false)
   end
 
-  def BASH.gsub(key, string, file)
+  def SHELL.gsub(key, string, file)
     system "sed -i -e 's/\\b#{key}\\b/#{string}/g' #{file}"
   end
 end
@@ -134,6 +138,10 @@ module GIT
   def GIT.init(gemname)
     system "git init #{gemname}"
   end
+
+  def GIT.checkout(file)
+    system "git checkout #{file}"
+  end
 end
 
 # gem command wraps
@@ -173,6 +181,10 @@ end
 
 # ruby wrappers
 module RUBY
+  def RUBY.check(file)
+    system "ruby -c #{file}"
+  end
+
   def RUBY.files
     #Find.find('.') do |fn|
     GIT.ls_files.split("\n").each do |fn|
@@ -481,14 +493,14 @@ class Tasks < Magni
 
   desc 'edit', 'Edit tasks.thor'
   def edit
-    system "vim #{__FILE__}"
-    system "ruby -c #{__FILE__}"
+    SHELL.vim __FILE__
+    RUBY.check __FILE__
   end
 
   desc 'revert', "reverts to tasks.thor's last commit"
   def revert
     goto_martelo
-    system 'git checkout lib/martelo.rb'
+    GIT.checkout('lib/martelo.rb')
     goto_wd
   end
 end
@@ -650,13 +662,14 @@ class Ruby < Magni
      [ldev, '# development libraries', false, true],
      [rrun, '# runtime requirements', true, false],
      [rdev, '# development requirements', true, false],
-    ].each do |libs, desc, system, join|
+    ].each do |libs, desc, os, join|
       puts desc.blue
       if join
         puts libs.map{|l| l}.join(', ')
       else
         libs.each do |lib|
-          key = (system)? ".#{lib}" : lib
+          # os? is it a linux command?
+          key = (os)? ".#{lib}" : lib
           puts "#{lib}: #{versions[key]}"
         end
       end
@@ -722,7 +735,7 @@ class General < Magni
   def sow(gemname)
     EXIT.usage "Expected a proper gem name(=~/^[a-z]+$/)" unless //.match?(gemname)
     EXIT.couldnt "#{gemname} exists." if File.exist?(gemname)
-    EXIT.couldnt "git init has problems?" unless system GIT.init(gemname)
+    EXIT.couldnt "git init has problems?" unless GIT.init(gemname)
     template = File.join(__dir__,'template')
     if File.directory?(template)
       packing_list = File.join(template, 'packing-list')
@@ -746,19 +759,19 @@ class General < Magni
                     puts "#{f1.ljust(30)} <= #{f0}"
                     FileUtils.mkdir_p(File.dirname(f1))
                     FileUtils.cp f0, f1
-                    BASH.gsub('Template', gemname.capitalize, f1)
-                    BASH.gsub('TEMPLATE', gemname.upcase, f1)
-                    BASH.gsub('template', gemname, f1)
+                    SHELL.gsub('Template', gemname.capitalize, f1)
+                    SHELL.gsub('TEMPLATE', gemname.upcase, f1)
+                    SHELL.gsub('template', gemname, f1)
                   end
                 end
               else
                 puts "#{to_path.ljust(30)} <= #{from_path}"
                 FileUtils.cp from_path, to_path
-                BASH.gsub('Template', gemname.capitalize, to_path)
-                BASH.gsub('TEMPLATE', gemname.upcase, to_path)
-                BASH.gsub('template', gemname, to_path)
-                BASH.gsub('author', author, to_path)
-                BASH.gsub('year', year, to_path)
+                SHELL.gsub('Template', gemname.capitalize, to_path)
+                SHELL.gsub('TEMPLATE', gemname.upcase, to_path)
+                SHELL.gsub('template', gemname, to_path)
+                SHELL.gsub('author', author, to_path)
+                SHELL.gsub('year', year, to_path)
               end
             when 'Directories:'
               puts to_path
@@ -802,7 +815,7 @@ class General < Magni
           if ['.irbrc'].include? f
             puts checkmark.encode('utf-8').green
           else
-            if BASH.colordiff("#{template}/#{f}", f, "--ignore-matching-lines='version ='")
+            if SHELL.colordiff("#{template}/#{f}", f, "--ignore-matching-lines='version ='")
               puts checkmark.encode('utf-8').green
             else
               ok &&= false
@@ -834,8 +847,8 @@ class General < Magni
     when nil
       print "pre-commit: "
       if File.exist?(f)
-        n = BASH.wc("#{template}/git_hooks/pre-commit")[0]
-        if BASH.colordiff("#{template}/git_hooks/pre-commit", '.git/hooks/pre-commit', head: n)
+        n = SHELL.wc("#{template}/git_hooks/pre-commit")[0]
+        if SHELL.colordiff("#{template}/git_hooks/pre-commit", '.git/hooks/pre-commit', head: n)
           puts checkmark.encode('utf-8').green
         else
           ok &&= false
