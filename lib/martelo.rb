@@ -807,8 +807,11 @@ class General < Magni
     when nil
       print "pre-commit: "
       if File.exist?(f)
-        if system "colordiff #{template}/git_hooks/pre-commit .git/hooks/pre-commit"
+        n = `wc #{template}/git_hooks/pre-commit`.split[0].to_i
+        if system "bash -c 'colordiff <(head -n #{n} #{template}/git_hooks/pre-commit) <(head -n #{n} .git/hooks/pre-commit)'"
           puts checkmark.encode('utf-8').green
+        else
+          ok &&= false
         end
       else
         puts cross.encode.red
