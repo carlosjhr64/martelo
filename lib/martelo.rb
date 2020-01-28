@@ -111,7 +111,7 @@ module GIT
 end
 
 # gem command wraps
-class GEM
+module GEM
   def GEM.which(lib)
     `gem which '#{lib}'`
   end
@@ -142,6 +142,107 @@ class GEM
     else
       EXIT.unavailable "Could not push #{gem}"
     end
+  end
+end
+
+# ruby wrappers
+module RUBY
+  def RUBY.files
+    #Find.find('.') do |fn|
+    GIT.ls_files.split("\n").each do |fn|
+      begin
+        yield(fn) if (fn =~ /\.((rb)|(thor))$/) or
+        (File.file?(fn) and File.executable?(fn) and (File.open(fn, &:gets) =~ /^#!.*\bruby/))
+      rescue
+        STDERR.puts "Warning: could not process #{fn}"
+        STDERR.puts $!.message
+      end
+    end
+  end
+
+  def RUBY.tests(pattern='.')
+    pattern = Regexp.new(pattern)
+    Find.find('./test') do |fn|
+      yield(fn) if fn=~/\.rb$/ or fn=~/\/tc_/
+    end
+  end
+
+  def RUBY.syntax
+    count = 0
+    RUBY.files do |fn|
+      #stdout, stderr, process = Open3.capture3("ruby -c #{fn}")
+      _, stderr, process = Open3.capture3("ruby -c #{fn}")
+      unless process.exitstatus == 0
+        count += 1
+        puts stderr.chomp.red
+      end
+    end
+    EXIT.dataerr "There were syntax errors" unless count == 0
+    puts "No syntax errors found.".green
+  end
+
+  def RUBY.test(pattern='.')
+    pass = true
+    RUBY.tests(pattern) do |fn|
+      verbose = (fn=~/\.rb$/)? ' --verbose=progress' : ''
+      unless system "ruby -I ./lib #{fn} #{verbose}"
+        pass = false
+        system("ruby -I ./lib #{fn}") unless fn=~/manually.rb$/
+      end
+    end
+    EXIT.dataerr "There were unit-test errors" unless pass
+    puts "All unit-tests passed".green
+  end
+
+  def RUBY.dependencies
+    name = Project.instance.name
+    versions = {}; versions['.system'] = 'linux/bash'
+    grun, lrun, rrun = [], [], []
+    gdev, ldev, rdev = [], [], []
+    RUBY.files do |fn|
+      run = (fn=~/^(lib)|(bin)/)? true : false
+      File.readlines(fn).each do |line|
+        case line
+        when /^\s*require\s['"]([^'"]+)['"]/
+          lib = $1
+          unless lib =~ /^#{name}\b/
+            lib, version = GEM.version(lib) # lib might translate
+            versions[lib] = version unless versions.has_key?(lib)
+            if versions[lib]
+              if run
+                grun.push(lib) unless grun.include?(lib)
+              else
+                gdev.push(lib) unless gdev.include?(lib)
+              end
+            else
+              if run
+                lrun.push(lib) unless lrun.include?(lib)
+              else
+                ldev.push(lib) unless ldev.include?(lib)
+              end
+            end
+          end
+        when /^(([^#\s*`]*((\bsystem\W*)|(`\W*)))|(#\s*`))([\w\-]+)/
+          cmd = $7
+          k = ".#{cmd}"
+          unless versions.has_key?(k)
+            if system "which '#{cmd}' > /dev/null 2>&1"
+              v = `#{cmd} --version 2> /dev/null`.strip.split(/\n/).first
+              v = `#{cmd} -v 2> /dev/null`.strip.split.last unless v
+              v = `#{cmd} -v 2>&1`.strip.split.last unless v
+              versions[k] = v
+            end
+          end
+          cmd = 'system' unless versions[k]
+          if run
+            rrun.push(cmd) unless rrun.include?(cmd)
+          else
+            rdev.push(cmd) unless rdev.include?(cmd)
+          end
+        end
+      end
+    end
+    return [versions, grun, gdev, lrun, ldev, rrun, rdev]
   end
 end
 
@@ -372,8 +473,8 @@ class Write < Magni
 
   def self.add_dependencies
     strbuf = ''
-    #versions, grun, gdev, lrun, ldev, rrun, rdev = Ruby.dependencies
-    versions, grun, gdev, _, _, rrun, rdev = Ruby.dependencies
+    #versions, grun, gdev, lrun, ldev, rrun, rdev = RUBY.dependencies
+    versions, grun, gdev, _, _, rrun, rdev = RUBY.dependencies
 
     # Runtime Gems...
     grun.each do |lib|
@@ -489,126 +590,29 @@ end
 
 # ruby wrappers
 class Ruby < Magni
-
-  def self.files
-    #Find.find('.') do |fn|
-    GIT.ls_files.split("\n").each do |fn|
-      begin
-        yield(fn) if (fn =~ /\.((rb)|(thor))$/) or
-        (File.file?(fn) and File.executable?(fn) and (File.open(fn, &:gets) =~ /^#!.*\bruby/))
-      rescue
-        STDERR.puts "Warning: could not process #{fn}"
-        STDERR.puts $!.message
-      end
-    end
-  end
-
-  def self.tests(pattern='.')
-    pattern = Regexp.new(pattern)
-    Find.find('./test') do |fn|
-      yield(fn) if fn=~/\.rb$/ or fn=~/\/tc_/
-    end
-  end
-
   desc 'files', 'Lists all ruby files'
   def files
-    Ruby.files{|fn| puts fn}
+    RUBY.files{|fn| puts fn}
   end
 
   desc 'tests [pattern]', 'Lists all unit tests matching optional filename pattern'
   def tests(pattern='.')
-    Ruby.tests(pattern){|fn| puts fn}
+    RUBY.tests(pattern){|fn| puts fn}
   end
 
-  def self.syntax
-    count = 0
-    Ruby.files do |fn|
-      #stdout, stderr, process = Open3.capture3("ruby -c #{fn}")
-      _, stderr, process = Open3.capture3("ruby -c #{fn}")
-      unless process.exitstatus == 0
-        count += 1
-        puts stderr.chomp.red
-      end
-    end
-    EXIT.dataerr "There were syntax errors" unless count == 0
-    puts "No syntax errors found.".green
-  end
   desc 'syntax', 'Quick ruby syntax check'
   def syntax
-    Ruby.syntax
+    RUBY.syntax
   end
 
-  def self.test(pattern='.')
-    pass = true
-    Ruby.tests(pattern) do |fn|
-      verbose = (fn=~/\.rb$/)? ' --verbose=progress' : ''
-      unless system "ruby -I ./lib #{fn} #{verbose}"
-        pass = false
-        system("ruby -I ./lib #{fn}") unless fn=~/manually.rb$/
-      end
-    end
-    EXIT.dataerr "There were unit-test errors" unless pass
-    puts "All unit-tests passed".green
-  end
   desc 'test [pattern]', 'Runs the test files filtered by optional filename pattern'
   def test(pattern='.')
-    Ruby.test(pattern)
+    RUBY.test(pattern)
   end
  
-  def self.dependencies
-    name = Project.instance.name
-    versions = {}; versions['.system'] = 'linux/bash'
-    grun, lrun, rrun = [], [], []
-    gdev, ldev, rdev = [], [], []
-    Ruby.files do |fn|
-      run = (fn=~/^(lib)|(bin)/)? true : false
-      File.readlines(fn).each do |line|
-        case line
-        when /^\s*require\s['"]([^'"]+)['"]/
-          lib = $1
-          unless lib =~ /^#{name}\b/
-            lib, version = GEM.version(lib) # lib might translate
-            versions[lib] = version unless versions.has_key?(lib)
-            if versions[lib]
-              if run
-                grun.push(lib) unless grun.include?(lib)
-              else
-                gdev.push(lib) unless gdev.include?(lib)
-              end
-            else
-              if run
-                lrun.push(lib) unless lrun.include?(lib)
-              else
-                ldev.push(lib) unless ldev.include?(lib)
-              end
-            end
-          end
-        when /^(([^#\s*`]*((\bsystem\W*)|(`\W*)))|(#\s*`))([\w\-]+)/
-          cmd = $7
-          k = ".#{cmd}"
-          unless versions.has_key?(k)
-            if system "which '#{cmd}' > /dev/null 2>&1"
-              v = `#{cmd} --version 2> /dev/null`.strip.split(/\n/).first
-              v = `#{cmd} -v 2> /dev/null`.strip.split.last unless v
-              v = `#{cmd} -v 2>&1`.strip.split.last unless v
-              versions[k] = v
-            end
-          end
-          cmd = 'system' unless versions[k]
-          if run
-            rrun.push(cmd) unless rrun.include?(cmd)
-          else
-            rdev.push(cmd) unless rdev.include?(cmd)
-          end
-        end
-      end
-    end
-    return [versions, grun, gdev, lrun, ldev, rrun, rdev]
-  end
-
   desc 'dependencies', 'Basically just greps for ruby require lines.'
   def dependencies
-    versions, grun, gdev, lrun, ldev, rrun, rdev = Ruby.dependencies
+    versions, grun, gdev, lrun, ldev, rrun, rdev = RUBY.dependencies
     [[grun, '# runtime gems', false, false],
      [gdev, '# development gems', false, false],
      [lrun, '# runtime libraries', false, true],
@@ -650,8 +654,8 @@ class General < Magni
       end
     end
     EXIT.dataerr 'Project had missing attributes' unless pass
-    Ruby.syntax
-    Ruby.test if File.exist?('./test')
+    RUBY.syntax
+    RUBY.test if File.exist?('./test')
     Cucumber.progress if File.exist?('./features')
   end
 
