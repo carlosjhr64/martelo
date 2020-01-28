@@ -1,5 +1,5 @@
 #!ruby
-VERSION = '7.22.200127'
+VERSION = '7.21.200127'
 
 ### Standard Libraries ###
 
@@ -669,8 +669,10 @@ class General < Magni
     GIT.commit_and_push(version)
   end
 
-  desc 'update_force', 'Updates gemspec and todo inspite of git status.'
-  def update_force
+  desc 'update', 'Updates gemspec and todo'
+  option :force, type: :boolean, default: false
+  def update
+    EXIT.dataerr "Git status not clear" unless options[:force] or GIT.status_porcelain==''
     invoke 'write:gemspec'
     invoke 'write:todo'
     invoke 'write:help' if File.exist? "./bin/#{Project.instance.name}"
@@ -679,12 +681,6 @@ class General < Magni
     else
       puts "OK, now verify the changes and update git."
     end
-  end
-
-  desc 'update', 'Updates gemspec and todo'
-  def update
-    EXIT.dataerr "Git status not clear" unless GIT.status_porcelain.length == 0
-    update_force
   end
 
   desc 'sow name', 'Creates a template gem diretory in the working directory'
