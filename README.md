@@ -1,6 +1,6 @@
 # martelo
 
-* [VERSION 7.22.200127](https://github.com/carlosjhr64/martelo/releases)
+* [VERSION 7.21.200127](https://github.com/carlosjhr64/martelo/releases)
 * [github](https://www.github.com/carlosjhr64/martelo)
 
 ## DESCRIPTION:
@@ -29,7 +29,6 @@ Having said that, maybe others will find it useful.
     $ thor general:template         # compares current workspace to template
     $ thor general:test             # Run all tests
     $ thor general:update           # Updates gemspec and todo
-    $ thor general:update_force     # Updates gemspec and todo inspite of git status.
 
     $ git
     $ ---
