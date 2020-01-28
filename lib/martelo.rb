@@ -63,7 +63,7 @@ end
 
 module BASH
   def BASH.wc(file)
-    Rubbish.bash("wc #{file}").split.map{|_|_.to_i}
+    `wc #{file}`.split.map{|_|_.to_i}
   end
 
   def BASH.colordiff(f1, f2, options=nil, head: nil)
@@ -78,7 +78,7 @@ module BASH
   end
 
   def BASH.gsub(key, string, file)
-    Rubbish.bash "sed -i -e 's/\\b#{key}\\b/#{string}/g' #{file}"
+    system "sed -i -e 's/\\b#{key}\\b/#{string}/g' #{file}"
   end
 end
 
@@ -129,6 +129,10 @@ module GIT
     system("git commit -a -m '#{tag}'")   or EXIT.couldnt   "git could not commit"
     system("git tag '#{tag}'")            or EXIT.couldnt   "git could not tag"
     system('git push')                    or EXIT.unavaible "git could not push"
+  end
+
+  def GIT.init(gemname)
+    system "git init #{gemname}"
   end
 end
 
@@ -718,7 +722,7 @@ class General < Magni
   def sow(gemname)
     EXIT.usage "Expected a proper gem name(=~/^[a-z]+$/)" unless //.match?(gemname)
     EXIT.couldnt "#{gemname} exists." if File.exist?(gemname)
-    EXIT.couldnt "git init has problems?" unless system "git init #{gemname}"
+    EXIT.couldnt "git init has problems?" unless system GIT.init(gemname)
     template = File.join(__dir__,'template')
     if File.directory?(template)
       packing_list = File.join(template, 'packing-list')
