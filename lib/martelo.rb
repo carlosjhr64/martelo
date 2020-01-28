@@ -138,7 +138,7 @@ module GEM
     EXIT.protocol "#{pkgem} exists!?" if File.exist?(pkgem)
     if system "gem push #{gem}"
       File.rename gem, pkgem
-      Write.add_history(pkgem)
+      WRITE.add_history(pkgem)
     else
       EXIT.unavailable "Could not push #{gem}"
     end
@@ -243,6 +243,96 @@ module RUBY
       end
     end
     return [versions, grun, gdev, lrun, ldev, rrun, rdev]
+  end
+end
+
+module WRITE
+  def WRITE.help(io=STDOUT)
+    `ruby -I ./lib ./bin/#{Project.instance.name} -h`.split(/\n/).each do |line|
+      if line.length > 0
+        io.print '    $ '
+        io.puts line
+      end
+    end
+  end
+
+  def WRITE.todo(io=STDOUT)
+    `grep -n '[A-Z][A-Z]*:[^:]' */*.* */*/*.* | grep '#'`.split("\n").each do |line|
+      if /(?<type>[A-Z]+):(?<msg>.+)$/=~line # This is the expected form
+        next unless ['TODO','DEBUG','TBD'].include?(type)
+        l = line.split(/:/,3)
+        io.puts "#{type}:\t#{msg.strip}"
+        io.puts "\t#{l[0]}, ##{l[1]}"
+      end
+    end
+  end
+
+  def WRITE.add_dependencies
+    strbuf = ''
+    #versions, grun, gdev, lrun, ldev, rrun, rdev = RUBY.dependencies
+    versions, grun, gdev, _, _, rrun, rdev = RUBY.dependencies
+
+    # Runtime Gems...
+    grun.each do |lib|
+      version = versions[lib]
+      strbuf += "  s.add_runtime_dependency '#{lib.gsub('/','-')}', '~> #{version.sub(/\.\d+$/,'')}', '>= #{version}'\n"
+    end
+
+    # Development Gems...
+    gdev.each do |lib|
+      next if grun.include?(lib) # No need to repeat gems already in runtime.
+      version = versions[lib]
+      strbuf += "  s.add_development_dependency '#{lib}', '~> #{version.sub(/\.\d+$/,'')}', '>= #{version}'\n"
+    end
+
+    # No need to mention standard libraries
+    #lrun.each do |lib|
+    #  strbuf += "  s.requirements << 'requires #{lib}'\n"
+    #end
+
+    # No need to mention standard libraries
+    #ldev.each do |lib|
+    #  strbuf += "  s.requirements << 'requires #{lib} in development'\n"
+    #end
+
+    rrun.each do |lib|
+      version = versions[".#{lib}"]
+      strbuf += "  s.requirements << '#{lib}: #{version}'\n"
+    end
+
+    rdev.each do |lib|
+      next if rrun.include?(lib) # No need to repeat requirement already in runtime.
+      version = versions[".#{lib}"]
+      strbuf += "  s.requirements << '#{lib} in development: #{version}'\n"
+    end
+
+    return strbuf
+  end
+
+  def WRITE.add_history(pkgem)
+    if pkgem=~/-(\d+\.\d+\.\d+)\.gem$/
+      version = $1
+      File.open(HISTORY, 'a') do |hst|
+        hst.puts "# #{version} / #{Time.now}"
+        hst.puts `md5sum #{pkgem}`
+      end
+    else
+      EXIT.software("Could not get version from pkgem: #{pkgem}")
+    end
+  end
+end
+
+# cucumber wrappers
+module CUCUMBER
+  def CUCUMBER.progress
+    pass = true
+    # TODO kinda of a waste to do
+    # `thor cucumber:progress` =>
+    system('cucumber -f progress') or pass = false
+    # There is stuff todo when something fails.
+    # Needed by class Test below.
+    EXIT.dataerr "There were Cucumber errors" unless pass
+    puts "All Cucumber tests passed".green
   end
 end
 
@@ -394,15 +484,6 @@ class Gem < Magni
 end
 
 class Write < Magni
-  def self.help(io=STDOUT)
-    `ruby -I ./lib ./bin/#{Project.instance.name} -h`.split(/\n/).each do |line|
-      if line.length > 0
-        io.print '    $ '
-        io.puts line
-      end
-    end
-  end
-
   desc 'help', "Updates README's HELP: section"
   def help
     executable = "./bin/#{Project.instance.name}"
@@ -420,7 +501,7 @@ class Write < Magni
         if line=~/^[=#][=#]\s*HELP:?\s*$/
           skip = true
           io.puts
-          Write.help(io)
+          WRITE.help(io)
           io.puts
           wrote = true
         end
@@ -428,19 +509,8 @@ class Write < Magni
       unless wrote
         io.puts "## HELP:"
         io.puts
-        Write.help(io)
+        WRITE.help(io)
         io.puts
-      end
-    end
-  end
-
-  def self.todo(io=STDOUT)
-    `grep -n '[A-Z][A-Z]*:[^:]' */*.* */*/*.* | grep '#'`.split("\n").each do |line|
-      if /(?<type>[A-Z]+):(?<msg>.+)$/=~line # This is the expected form
-        next unless ['TODO','DEBUG','TBD'].include?(type)
-        l = line.split(/:/,3)
-        io.puts "#{type}:\t#{msg.strip}"
-        io.puts "\t#{l[0]}, ##{l[1]}"
       end
     end
   end
@@ -457,7 +527,7 @@ class Write < Magni
         if line=~/^==\s*File\s+List\s*$/
           skip = true
           io.puts
-          Write.todo(io)
+          WRITE.todo(io)
           io.puts
           wrote = true
         end
@@ -465,52 +535,10 @@ class Write < Magni
       unless wrote
         io.puts "== File List"
         io.puts
-        Write.todo(io)
+        WRITE.todo(io)
         io.puts
       end
     end
-  end
-
-  def self.add_dependencies
-    strbuf = ''
-    #versions, grun, gdev, lrun, ldev, rrun, rdev = RUBY.dependencies
-    versions, grun, gdev, _, _, rrun, rdev = RUBY.dependencies
-
-    # Runtime Gems...
-    grun.each do |lib|
-      version = versions[lib]
-      strbuf += "  s.add_runtime_dependency '#{lib.gsub('/','-')}', '~> #{version.sub(/\.\d+$/,'')}', '>= #{version}'\n"
-    end
-
-    # Development Gems...
-    gdev.each do |lib|
-      next if grun.include?(lib) # No need to repeat gems already in runtime.
-      version = versions[lib]
-      strbuf += "  s.add_development_dependency '#{lib}', '~> #{version.sub(/\.\d+$/,'')}', '>= #{version}'\n"
-    end
-
-    # No need to mention standard libraries
-    #lrun.each do |lib|
-    #  strbuf += "  s.requirements << 'requires #{lib}'\n"
-    #end
-
-    # No need to mention standard libraries
-    #ldev.each do |lib|
-    #  strbuf += "  s.requirements << 'requires #{lib} in development'\n"
-    #end
-
-    rrun.each do |lib|
-      version = versions[".#{lib}"]
-      strbuf += "  s.requirements << '#{lib}: #{version}'\n"
-    end
-
-    rdev.each do |lib|
-      next if rrun.include?(lib) # No need to repeat requirement already in runtime.
-      version = versions[".#{lib}"]
-      strbuf += "  s.requirements << '#{lib} in development: #{version}'\n"
-    end
-
-    return strbuf
   end
 
   desc "gemspec", "Writes/Updates the gemspec file"
@@ -551,40 +579,17 @@ SUMMARY
 #{ls_files}
   )
 #{(executable)? "  s.executables << '#{name}'" : ''}
-#{Write.add_dependencies}
+#{WRITE.add_dependencies}
 end
 EOT
     end #File.open
   end
-
-  def self.add_history(pkgem)
-    if pkgem=~/-(\d+\.\d+\.\d+)\.gem$/
-      version = $1
-      File.open(HISTORY, 'a') do |hst|
-        hst.puts "# #{version} / #{Time.now}"
-        hst.puts `md5sum #{pkgem}`
-      end
-    else
-      EXIT.software("Could not get version from pkgem: #{pkgem}")
-    end
-  end
 end
 
-# cucumber wrappers
 class Cucumber < Magni
   desc 'progress', 'Quick cucumber run'
-  def self.progress
-    pass = true
-    # TODO kinda of a waste to do
-    # `thor cucumber:progress` =>
-    system('cucumber -f progress') or pass = false
-    # There is stuff todo when something fails.
-    # Needed by class Test below.
-    EXIT.dataerr "There were Cucumber errors" unless pass
-    puts "All Cucumber tests passed".green
-  end
   def progress
-    Cucumber.progress
+    CUCUMBER.progress
   end
 end
 
