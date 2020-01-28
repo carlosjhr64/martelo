@@ -1,6 +1,6 @@
 # martelo
 
-* [VERSION 7.21.200128](https://github.com/carlosjhr64/martelo/releases)
+* [VERSION 8.21.200128](https://github.com/carlosjhr64/martelo/releases)
 * [github](https://www.github.com/carlosjhr64/martelo)
 
 ## DESCRIPTION:
