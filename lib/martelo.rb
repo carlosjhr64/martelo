@@ -1,5 +1,5 @@
 #!ruby
-VERSION = '8.21.200128'
+VERSION = '8.21.200129'
 
 ### Standard Libraries ###
 
@@ -400,9 +400,8 @@ class Project
     @wd = wd
 
     @readme      = README
-    description  = File.read(@readme).match(/\n#+\s*DESCRIPTION:?(.*?)\n#/mi)[1].strip
-    @description = description.split(/\n\n/)[0..1].join("\n\n").strip
-    @summary     = description.split(/\n\n/).first.strip
+    @description  = File.read(@readme).match(/\n#+\s*DESCRIPTION:?(.*?)\n#/mi)[1].strip
+    @summary     = @description.split(/\n\n/).first.strip
 
     @name        = File.basename(@wd).split(/\-/).first
     @gemspec     = "#{@name}.gemspec"
