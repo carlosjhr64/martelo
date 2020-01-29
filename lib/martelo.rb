@@ -842,6 +842,7 @@ class Get < Magni
           FileUtils.cp "#{template}/#{f}", f
         else
           puts "File exist!".red
+          ok &&= false
         end
         return
       end
@@ -860,6 +861,7 @@ class Get < Magni
         end
       else
         puts cross.encode.red
+        ok &&= false
       end
     when 'cp'
       unless File.exist? f
@@ -873,6 +875,7 @@ class Get < Magni
         FileUtils.cp "#{template}/git_hooks/pre-commit", '.git/hooks/pre-commit'
       else
         puts "File exist!".red
+        ok &&= false
       end
       return
     else
