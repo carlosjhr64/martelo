@@ -1,5 +1,5 @@
 #!ruby
-VERSION = '8.21.200129'
+VERSION = '8.21.200202'
 
 ### Standard Libraries ###
 
@@ -204,7 +204,7 @@ module RUBY
   def RUBY.tests(pattern='.')
     pattern = Regexp.new(pattern)
     Find.find('./test') do |fn|
-      yield(fn) if fn=~/\.rb$/ or fn=~/\/tc_/
+      yield(fn) if fn=~/\/tc_/
     end
   end
 
@@ -225,10 +225,8 @@ module RUBY
   def RUBY.test(pattern='.')
     pass = true
     RUBY.tests(pattern) do |fn|
-      verbose = (fn=~/\.rb$/)? ' --verbose=progress' : ''
-      unless system "ruby -I ./lib #{fn} #{verbose}"
+      unless system "ruby -I ./lib #{fn}"
         pass = false
-        system("ruby -I ./lib #{fn}") unless fn=~/manually.rb$/
       end
     end
     EXIT.dataerr "There were unit-test errors" unless pass
