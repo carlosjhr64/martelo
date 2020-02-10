@@ -1,5 +1,5 @@
 #!ruby
-VERSION = '8.21.200202'
+VERSION = '8.21.200210'
 
 ### Standard Libraries ###
 
@@ -808,7 +808,7 @@ class Get < Magni
     ok = true
     ####
     ['.ruby-version', '.config.fish', '.gitignore', '.gemignore', '.irbrc',
-     'test/tc_version', 'test/tc_readme_rocket_check', 'test/tc_readme_spell', 'test/tc_lexicon',
+     'test/tc_version', 'test/tc_readme_rocket_check', 'test/tc_lexicon',
     ].each do |f|
       case cp
       when nil
