@@ -1,5 +1,5 @@
 #!ruby
-VERSION = '8.21.200210'
+VERSION = '8.21.210108'
 
 ### Standard Libraries ###
 
@@ -12,10 +12,11 @@ require 'date'
 ### Gems ###
 
 require 'helpema'
-HELPEMA::Helpema.requires <<GEMS
-  rubbish  ~>0.2.0
-  colorize ~>0.8.0
-GEMS
+Helpema.requires'
+helpema  ~>3.0
+ruby     ~>3.0
+rubbish  ~>0.2
+colorize ~>0.8'
 
 ### Project's constants ###
 

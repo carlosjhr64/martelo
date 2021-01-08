@@ -1,6 +1,6 @@
 # martelo
 
-* [VERSION 8.21.200128](https://github.com/carlosjhr64/martelo/releases)
+* [VERSION 8.21.210108](https://github.com/carlosjhr64/martelo/releases)
 * [github](https://www.github.com/carlosjhr64/martelo)
 
 ## DESCRIPTION:
@@ -91,7 +91,7 @@ So if everything works, you should be able to start a new project:
 
 ## LICENSE:
 
-Copyright 2020 carlosjhr64
+Copyright 2021 carlosjhr64
 
 Permission is hereby granted, free of charge,
 to any person obtaining a copy of this software and
