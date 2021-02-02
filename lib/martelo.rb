@@ -1,5 +1,5 @@
 #!ruby
-VERSION = '8.21.210108'
+VERSION = '8.21.210202'
 
 ### Standard Libraries ###
 
@@ -443,8 +443,7 @@ class Magni < Thor
   def initialize(*params)
     super
     @wd = Dir.getwd
-    warnings = proc { get_warnings }
-    ObjectSpace.define_finalizer(self, warnings)
+    at_exit { get_warnings }
   end
 
   private
