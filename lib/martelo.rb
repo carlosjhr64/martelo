@@ -288,12 +288,10 @@ end
 
 module WRITE
   def WRITE.help(io=STDOUT)
-    `ruby -I ./lib ./bin/#{Project.instance.name} -h`.split(/\n/).each do |line|
-      if line.length > 0
-        io.print '    $ '
-        io.puts line
-      end
-    end
+    io.puts '```shell'
+    io.puts "$ #{Project.instance.name} --help"
+    `ruby -I ./lib ./bin/#{Project.instance.name} --help`.split(/\n/).each{io.puts _1}
+    io.puts '```'
   end
 
   def WRITE.todo(io=STDOUT)
@@ -536,7 +534,7 @@ class Write < Magni
         skip = false if line=~/^##/
         next if skip
         io.puts line
-        if line=~/^[=#][=#]\s*HELP:?\s*$/
+        if line=~/^[=#][=#]\s*HELP:?\s*$/i
           skip = true
           io.puts
           WRITE.help(io)
@@ -545,7 +543,7 @@ class Write < Magni
         end
       end
       unless wrote
-        io.puts "## HELP:"
+        io.puts "## Help:"
         io.puts
         WRITE.help(io)
         io.puts
