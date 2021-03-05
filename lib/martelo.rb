@@ -1,5 +1,5 @@
 #!ruby
-VERSION = '8.21.210202'
+VERSION = '8.21.210305'
 
 ### Standard Libraries ###
 
@@ -64,7 +64,7 @@ end
 
 module SHELL
   def SHELL.vim(file)
-    system "vim #{file}"
+    system "vi #{file}"
   end
 
   def SHELL.wc(file)
@@ -536,17 +536,13 @@ class Write < Magni
         io.puts line
         if line=~/^[=#][=#]\s*HELP:?\s*$/i
           skip = true
-          io.puts
           WRITE.help(io)
-          io.puts
           wrote = true
         end
       end
       unless wrote
         io.puts "## Help:"
-        io.puts
         WRITE.help(io)
-        io.puts
       end
     end
   end
